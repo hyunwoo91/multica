@@ -8,8 +8,10 @@ import { IssueDetail, StatusIcon, PriorityIcon } from "@/features/issues/compone
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/features/issues/config";
 import { useActorName } from "@/features/workspace";
 import { ActorAvatar } from "@/components/common/actor-avatar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
+  ArrowLeft,
   ArrowRight,
   MoreHorizontal,
   Inbox,
@@ -219,6 +221,7 @@ function InboxListItem({
 // ---------------------------------------------------------------------------
 
 export default function InboxPage() {
+  const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const urlIssue = searchParams.get("issue") ?? "";
 
@@ -315,156 +318,176 @@ export default function InboxPage() {
     }
   };
 
+  // Shared list panel content
+  const listContent = (
+    <div className="flex flex-col border-r h-full">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-sm font-semibold">Inbox</h1>
+          {unreadCount > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="text-muted-foreground"
+              />
+            }
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-auto">
+            <DropdownMenuItem onClick={handleMarkAllRead}>
+              <CheckCheck className="h-4 w-4" />
+              Mark all as read
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleArchiveAll}>
+              <Archive className="h-4 w-4" />
+              Archive all
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleArchiveAllRead}>
+              <BookCheck className="h-4 w-4" />
+              Archive all read
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleArchiveCompleted}>
+              <ListChecks className="h-4 w-4" />
+              Archive completed
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Inbox className="mb-3 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm">No notifications</p>
+        </div>
+      ) : (
+        <div>
+          {items.map((item) => (
+            <InboxListItem
+              key={item.id}
+              item={item}
+              isSelected={(item.issue_id ?? item.id) === selectedKey}
+              onClick={() => handleSelect(item)}
+              onArchive={() => handleArchive(item.id)}
+            />
+          ))}
+        </div>
+      )}
+      </div>
+    </div>
+  );
+
+  // Shared detail panel content
+  const detailContent = (
+    <div className="flex flex-col min-h-0 h-full">
+      {isMobile && selected && (
+        <div className="flex h-12 shrink-0 items-center border-b px-4">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedKey("")}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
+      )}
+      {selected?.issue_id ? (
+        <IssueDetail
+          key={selected.id}
+          issueId={selected.issue_id}
+          defaultSidebarOpen={false}
+          layoutId="multica_inbox_issue_detail_layout"
+          highlightCommentId={selected.details?.comment_id ?? undefined}
+          onDelete={() => {
+            handleArchive(selected.id);
+          }}
+        />
+      ) : selected ? (
+        <div className="p-6">
+          <h2 className="text-lg font-semibold">{selected.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {typeLabels[selected.type]} · {timeAgo(selected.created_at)}
+          </p>
+          {selected.body && (
+            <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">
+              {selected.body}
+            </div>
+          )}
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleArchive(selected.id)}
+            >
+              <Archive className="mr-1.5 h-3.5 w-3.5" />
+              Archive
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+          <Inbox className="mb-3 h-10 w-10 text-muted-foreground/30" />
+          <p className="text-sm">
+            {items.length === 0
+              ? "Your inbox is empty"
+              : "Select a notification to view details"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
-      <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
-        <ResizablePanel id="list" defaultSize={320} minSize={240} maxSize={480} groupResizeBehavior="preserve-pixel-size">
-          <div className="flex flex-col border-r h-full">
-            <div className="flex h-12 shrink-0 items-center border-b px-4">
-              <Skeleton className="h-5 w-16" />
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-1 p-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                  <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
+      <div className="flex flex-1 min-h-0">
+        <div className="flex flex-col border-r h-full flex-1 md:flex-none md:w-80">
+          <div className="flex h-12 shrink-0 items-center border-b px-4">
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-1 p-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel id="detail" minSize="40%">
-          <div className="p-6">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="mt-4 h-4 w-32" />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
+        <div className="hidden md:block flex-1 p-6">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="mt-4 h-4 w-32" />
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile: show list or detail, not both
+  if (isMobile) {
+    return (
+      <div className="flex flex-1 min-h-0 flex-col">
+        {selectedKey ? detailContent : listContent}
+      </div>
     );
   }
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
       <ResizablePanel id="list" defaultSize={320} minSize={240} maxSize={480} groupResizeBehavior="preserve-pixel-size">
-      {/* Left column — inbox list */}
-      <div className="flex flex-col border-r h-full">
-        <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold">Inbox</h1>
-            {unreadCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {unreadCount}
-              </span>
-            )}
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground"
-                />
-              }
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-auto">
-              <DropdownMenuItem onClick={handleMarkAllRead}>
-                <CheckCheck className="h-4 w-4" />
-                Mark all as read
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleArchiveAll}>
-                <Archive className="h-4 w-4" />
-                Archive all
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleArchiveAllRead}>
-                <BookCheck className="h-4 w-4" />
-                Archive all read
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleArchiveCompleted}>
-                <ListChecks className="h-4 w-4" />
-                Archive completed
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto">
-        {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Inbox className="mb-3 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm">No notifications</p>
-          </div>
-        ) : (
-          <div>
-            {items.map((item) => (
-              <InboxListItem
-                key={item.id}
-                item={item}
-                isSelected={(item.issue_id ?? item.id) === selectedKey}
-                onClick={() => handleSelect(item)}
-                onArchive={() => handleArchive(item.id)}
-              />
-            ))}
-          </div>
-        )}
-        </div>
-      </div>
+        {listContent}
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel id="detail" minSize="40%">
-      {/* Right column — detail */}
-      <div className="flex flex-col min-h-0 h-full">
-        {selected?.issue_id ? (
-          <IssueDetail
-            key={selected.id}
-            issueId={selected.issue_id}
-            defaultSidebarOpen={false}
-            layoutId="multica_inbox_issue_detail_layout"
-            highlightCommentId={selected.details?.comment_id ?? undefined}
-            onDelete={() => {
-              handleArchive(selected.id);
-            }}
-          />
-        ) : selected ? (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold">{selected.title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {typeLabels[selected.type]} · {timeAgo(selected.created_at)}
-            </p>
-            {selected.body && (
-              <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">
-                {selected.body}
-              </div>
-            )}
-            <div className="mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleArchive(selected.id)}
-              >
-                <Archive className="mr-1.5 h-3.5 w-3.5" />
-                Archive
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-            <Inbox className="mb-3 h-10 w-10 text-muted-foreground/30" />
-            <p className="text-sm">
-              {items.length === 0
-                ? "Your inbox is empty"
-                : "Select a notification to view details"}
-            </p>
-          </div>
-        )}
-      </div>
+        {detailContent}
       </ResizablePanel>
     </ResizablePanelGroup>
   );
