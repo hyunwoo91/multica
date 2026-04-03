@@ -108,8 +108,8 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			b.WriteString("   a. Create a new branch\n")
 			b.WriteString("   b. Implement the changes and commit\n")
 		}
-		b.WriteString("   c. Push the branch to the remote\n")
-		b.WriteString("   d. Create a pull request (decide the target branch based on the repo's conventions)\n")
+		b.WriteString("   c. Push the branch to the remote (`git push origin`)\n")
+		b.WriteString("   d. Create a pull request **targeting the same repository** you checked out. Use `git remote get-url origin` to get the repo and pass it explicitly: `gh pr create --repo <owner/repo>`\n")
 		fmt.Fprintf(&b, "   e. Post the PR link as a comment: `multica issue comment add %s --content \"PR: <url>\"`\n", ctx.IssueID)
 		b.WriteString("5. If the task does not require code (e.g. research, documentation), post your findings as a comment\n")
 		fmt.Fprintf(&b, "6. Run `multica issue status %s in_review`\n", ctx.IssueID)
