@@ -199,6 +199,11 @@ func (c *Cache) CreateWorktree(params WorktreeParams) (*WorktreeResult, error) {
 		_ = excludeFromGit(worktreePath, pattern)
 	}
 
+	// Tell gh CLI that origin is the base repo, not a fork upstream.
+	// Without this, gh auto-detects fork relationships and targets the
+	// upstream repo for PRs instead of the configured workspace repo.
+	_ = exec.Command("git", "-C", worktreePath, "config", "remote.origin.gh-resolved", "base").Run()
+
 	c.logger.Info("repo checkout: worktree created",
 		"url", params.RepoURL,
 		"path", worktreePath,
