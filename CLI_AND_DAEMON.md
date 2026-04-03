@@ -289,6 +289,28 @@ multica issue comment add <issue-id> --parent <comment-id> --content "Thanks!"
 multica issue comment delete <comment-id>
 ```
 
+### Attachments
+
+```bash
+# Upload file(s) to an issue
+multica attachment upload screenshot.png --issue <issue-id>
+multica attachment upload file1.png file2.pdf --issue <issue-id>
+
+# Upload file(s) and create a comment with them
+multica attachment upload screenshot.png --issue <issue-id> --comment "Here's the screenshot"
+
+# Download an attachment
+multica attachment download <attachment-id>
+multica attachment download <attachment-id> -o /tmp
+```
+
+Files can also be attached inline when creating issues or comments:
+
+```bash
+multica issue create --title "Bug report" --attachment screenshot.png
+multica issue comment add <issue-id> --content "See attached" --attachment report.pdf
+```
+
 ### Execution History
 
 ```bash
