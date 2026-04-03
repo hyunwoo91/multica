@@ -191,6 +191,60 @@ func (s *ChannelService) GetConversationHistory(ctx context.Context, issueID str
 	return s.Queries.ListChannelMessagesByIssue(ctx, util.ParseUUID(issueID))
 }
 
+// SendNotification sends a one-way notification message to the first assigned
+// channel on an issue. Unlike AskQuestion, it does not expect a response.
+// If the issue has no assigned channel, it silently returns nil.
+func (s *ChannelService) SendNotification(ctx context.Context, issueID, message string) error {
+	ic, err := s.Queries.GetFirstIssueChannel(ctx, util.ParseUUID(issueID))
+	if err != nil {
+		// No channel assigned — nothing to do.
+		return nil
+	}
+
+	provider, ok := channel.GetProvider(ic.ChannelProvider)
+	if !ok {
+		return fmt.Errorf("unsupported channel provider: %s", ic.ChannelProvider)
+	}
+
+	if !ic.ThreadRef.Valid || ic.ThreadRef.String == "" {
+		// First message — create thread with issue context.
+		issueCtx, err := s.buildIssueContext(ctx, issueID)
+		if err != nil {
+			slog.Warn("channel: failed to build issue context for notification", "error", err)
+			issueCtx = channel.IssueContext{Title: "Issue", Identifier: issueID}
+		}
+		result, err := provider.SendFirstMessage(ctx, ic.ChannelConfig, message, issueCtx)
+		if err != nil {
+			return fmt.Errorf("send first notification: %w", err)
+		}
+		// Store thread reference for future messages.
+		if err := s.Queries.UpdateIssueChannelThreadRef(ctx, db.UpdateIssueChannelThreadRefParams{
+			ID:        ic.ID,
+			ThreadRef: pgtype.Text{String: result.ThreadRef, Valid: true},
+		}); err != nil {
+			slog.Warn("channel: failed to store thread ref", "error", err)
+		}
+	} else {
+		_, err = provider.SendMessage(ctx, ic.ChannelConfig, channel.Message{
+			Text:      message,
+			ThreadRef: ic.ThreadRef.String,
+		})
+		if err != nil {
+			return fmt.Errorf("send notification: %w", err)
+		}
+	}
+
+	// Store outbound message for history.
+	s.Queries.CreateChannelMessage(ctx, db.CreateChannelMessageParams{
+		IssueChannelID: ic.ID,
+		Direction:      "outbound",
+		Content:        message,
+		SenderType:     "system",
+	})
+
+	return nil
+}
+
 func (s *ChannelService) buildIssueContext(ctx context.Context, issueID string) (channel.IssueContext, error) {
 	issue, err := s.Queries.GetIssue(ctx, util.ParseUUID(issueID))
 	if err != nil {
