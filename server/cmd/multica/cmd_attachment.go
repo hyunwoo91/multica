@@ -17,6 +17,14 @@ var attachmentCmd = &cobra.Command{
 	Short: "Manage attachments",
 }
 
+var attachmentUploadCmd = &cobra.Command{
+	Use:   "upload <file-path> [additional-file-paths...]",
+	Short: "Upload file(s) to an issue",
+	Long:  "Uploads one or more files and attaches them to the specified issue. Returns attachment metadata as JSON.",
+	Args:  cobra.MinimumNArgs(1),
+	RunE:  runAttachmentUpload,
+}
+
 var attachmentDownloadCmd = &cobra.Command{
 	Use:   "download <attachment-id>",
 	Short: "Download an attachment to a local file",
@@ -26,9 +34,78 @@ var attachmentDownloadCmd = &cobra.Command{
 }
 
 func init() {
+	attachmentCmd.AddCommand(attachmentUploadCmd)
 	attachmentCmd.AddCommand(attachmentDownloadCmd)
 
+	attachmentUploadCmd.Flags().String("issue", "", "Issue ID to attach the file(s) to (required)")
+	attachmentUploadCmd.Flags().String("comment", "", "Comment content to create with the attachment(s)")
+	attachmentUploadCmd.Flags().String("output", "json", "Output format: table or json")
+
 	attachmentDownloadCmd.Flags().StringP("output-dir", "o", ".", "Directory to save the downloaded file")
+}
+
+func runAttachmentUpload(cmd *cobra.Command, args []string) error {
+	issueID, _ := cmd.Flags().GetString("issue")
+	if issueID == "" {
+		return fmt.Errorf("--issue is required")
+	}
+
+	client, err := newAPIClient(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	var uploaded []map[string]any
+	var attachmentIDs []string
+	for _, filePath := range args {
+		data, readErr := os.ReadFile(filePath)
+		if readErr != nil {
+			return fmt.Errorf("read file %s: %w", filePath, readErr)
+		}
+		id, uploadErr := client.UploadFile(ctx, data, filePath, issueID)
+		if uploadErr != nil {
+			return fmt.Errorf("upload file %s: %w", filePath, uploadErr)
+		}
+		attachmentIDs = append(attachmentIDs, id)
+		uploaded = append(uploaded, map[string]any{
+			"id":       id,
+			"filename": filepath.Base(filePath),
+		})
+		fmt.Fprintf(os.Stderr, "Uploaded %s (id: %s)\n", filepath.Base(filePath), id)
+	}
+
+	// Optionally create a comment with the uploaded attachments.
+	commentContent, _ := cmd.Flags().GetString("comment")
+	if commentContent != "" {
+		body := map[string]any{
+			"content":        commentContent,
+			"attachment_ids": attachmentIDs,
+		}
+		var commentResult map[string]any
+		if err := client.PostJSON(ctx, "/api/issues/"+issueID+"/comments", body, &commentResult); err != nil {
+			return fmt.Errorf("create comment: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "Comment added to issue %s.\n", issueID[:8])
+	}
+
+	output, _ := cmd.Flags().GetString("output")
+	if output == "table" {
+		headers := []string{"ID", "FILENAME"}
+		rows := make([][]string, 0, len(uploaded))
+		for _, u := range uploaded {
+			rows = append(rows, []string{
+				fmt.Sprintf("%v", u["id"]),
+				fmt.Sprintf("%v", u["filename"]),
+			})
+		}
+		cli.PrintTable(os.Stdout, headers, rows)
+		return nil
+	}
+
+	return cli.PrintJSON(os.Stdout, uploaded)
 }
 
 func runAttachmentDownload(cmd *cobra.Command, args []string) error {
