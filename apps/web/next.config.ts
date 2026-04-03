@@ -7,7 +7,20 @@ config({ path: resolve(__dirname, "../../.env") });
 
 const remoteApiUrl = process.env.REMOTE_API_URL || "http://localhost:8080";
 
+// Allow dev HMR connections from the configured frontend origin hostname.
+const devOrigins: string[] = [];
+try {
+  const origin = process.env.FRONTEND_ORIGIN;
+  if (origin) {
+    const hostname = new URL(origin).hostname;
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      devOrigins.push(hostname);
+    }
+  }
+} catch {}
+
 const nextConfig: NextConfig = {
+  ...(devOrigins.length > 0 && { allowedDevOrigins: devOrigins }),
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [75, 80, 85],
