@@ -331,6 +331,7 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 type UpdateMeRequest struct {
 	Name      *string `json:"name"`
+	Email     *string `json:"email"`
 	AvatarURL *string `json:"avatar_url"`
 }
 
@@ -361,9 +362,19 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	email := currentUser.Email
+	if req.Email != nil {
+		email = strings.ToLower(strings.TrimSpace(*req.Email))
+		if email == "" {
+			writeError(w, http.StatusBadRequest, "email is required")
+			return
+		}
+	}
+
 	params := db.UpdateUserParams{
-		ID:   currentUser.ID,
-		Name: name,
+		ID:    currentUser.ID,
+		Name:  name,
+		Email: email,
 	}
 	if req.AvatarURL != nil {
 		params.AvatarUrl = pgtype.Text{String: strings.TrimSpace(*req.AvatarURL), Valid: true}
@@ -371,6 +382,10 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	updatedUser, err := h.Queries.UpdateUser(r.Context(), params)
 	if err != nil {
+		if isUniqueViolation(err) {
+			writeError(w, http.StatusConflict, "email is already in use")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to update user")
 		return
 	}

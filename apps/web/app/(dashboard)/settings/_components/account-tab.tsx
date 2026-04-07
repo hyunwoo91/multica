@@ -16,12 +16,14 @@ export function AccountTab() {
   const setUser = useAuthStore((s) => s.setUser);
 
   const [profileName, setProfileName] = useState(user?.name ?? "");
+  const [profileEmail, setProfileEmail] = useState(user?.email ?? "");
   const [profileSaving, setProfileSaving] = useState(false);
   const { upload, uploading } = useFileUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setProfileName(user?.name ?? "");
+    setProfileEmail(user?.email ?? "");
   }, [user]);
 
   const initials = (user?.name ?? "")
@@ -50,7 +52,7 @@ export function AccountTab() {
   const handleProfileSave = async () => {
     setProfileSaving(true);
     try {
-      const updated = await api.updateMe({ name: profileName });
+      const updated = await api.updateMe({ name: profileName, email: profileEmail });
       setUser(updated);
       toast.success("Profile updated");
     } catch (e) {
@@ -115,11 +117,20 @@ export function AccountTab() {
                 className="mt-1"
               />
             </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                value={profileEmail}
+                onChange={(e) => setProfileEmail(e.target.value)}
+                className="mt-1"
+              />
+            </div>
             <div className="flex items-center justify-end gap-2 pt-1">
               <Button
                 size="sm"
                 onClick={handleProfileSave}
-                disabled={profileSaving || !profileName.trim()}
+                disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
               >
                 <Save className="h-3 w-3" />
                 {profileSaving ? "Updating..." : "Update Profile"}

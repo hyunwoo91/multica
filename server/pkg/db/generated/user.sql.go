@@ -78,7 +78,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 const updateUser = `-- name: UpdateUser :one
 UPDATE "user" SET
     name = COALESCE($2, name),
-    avatar_url = COALESCE($3, avatar_url),
+    email = COALESCE($3, email),
+    avatar_url = COALESCE($4, avatar_url),
     updated_at = now()
 WHERE id = $1
 RETURNING id, name, email, avatar_url, created_at, updated_at
@@ -87,11 +88,17 @@ RETURNING id, name, email, avatar_url, created_at, updated_at
 type UpdateUserParams struct {
 	ID        pgtype.UUID `json:"id"`
 	Name      string      `json:"name"`
+	Email     string      `json:"email"`
 	AvatarUrl pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Name, arg.AvatarUrl)
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.AvatarUrl,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
