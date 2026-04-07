@@ -30,14 +30,6 @@ export function AccountTab() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Email editing (account-level, not profile-level)
-  const [profileEmail, setProfileEmail] = useState(user?.email ?? "");
-  const [emailSaving, setEmailSaving] = useState(false);
-
-  useEffect(() => {
-    setProfileEmail(user?.email ?? "");
-  }, [user]);
-
   // Current workspace profile
   const currentMember = members.find((m) => m.user_id === user?.id);
   const currentProfileId = currentMember?.profile_id;
@@ -60,6 +52,7 @@ export function AccountTab() {
   // Edit profile dialog state
   const [editProfile, setEditProfile] = useState<Profile | null>(null);
   const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const editFileRef = useRef<HTMLInputElement>(null);
   const { upload: editUpload, uploading: editUploading } = useFileUpload();
@@ -67,11 +60,13 @@ export function AccountTab() {
   // New profile dialog state
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [newSaving, setNewSaving] = useState(false);
 
   const openEdit = (p: Profile) => {
     setEditProfile(p);
     setEditName(p.name);
+    setEditEmail(p.email);
   };
 
   const handleEditAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,11 +93,11 @@ export function AccountTab() {
     if (!editProfile) return;
     setEditSaving(true);
     try {
-      const updated = await api.updateProfile(editProfile.id, { name: editName });
+      const updated = await api.updateProfile(editProfile.id, { name: editName, email: editEmail });
       setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       setEditProfile(null);
       if (updated.is_default) {
-        const me = await api.updateMe({ name: editName });
+        const me = await api.updateMe({ name: editName, email: editEmail });
         setUser(me);
       }
       await refreshMembers();
@@ -111,19 +106,6 @@ export function AccountTab() {
       toast.error(e instanceof Error ? e.message : "Failed to update profile");
     } finally {
       setEditSaving(false);
-    }
-  };
-
-  const handleEmailSave = async () => {
-    setEmailSaving(true);
-    try {
-      const updated = await api.updateMe({ email: profileEmail });
-      setUser(updated);
-      toast.success("Email updated");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update email");
-    } finally {
-      setEmailSaving(false);
     }
   };
 
@@ -142,10 +124,11 @@ export function AccountTab() {
   const handleCreate = async () => {
     setNewSaving(true);
     try {
-      const created = await api.createProfile({ name: newName });
+      const created = await api.createProfile({ name: newName, email: newEmail });
       setProfiles((prev) => [...prev, created]);
       setShowNew(false);
       setNewName("");
+      setNewEmail("");
       toast.success("Profile created");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create profile");
@@ -183,34 +166,6 @@ export function AccountTab() {
 
   return (
     <div className="space-y-8">
-      {/* Account email section */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold">Account</h2>
-        <Card>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-xs text-muted-foreground">Email</Label>
-              <Input
-                type="email"
-                value={profileEmail}
-                onChange={(e) => setProfileEmail(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <Button
-                size="sm"
-                onClick={handleEmailSave}
-                disabled={emailSaving || !profileEmail.trim() || profileEmail === user?.email}
-              >
-                <Save className="h-3 w-3" />
-                {emailSaving ? "Updating..." : "Update Email"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
       {/* Profiles section */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -253,6 +208,7 @@ export function AccountTab() {
                       </span>
                     )}
                   </div>
+                  <div className="text-xs text-muted-foreground truncate">{p.email}</div>
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -281,7 +237,7 @@ export function AccountTab() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Profiles let you use different names and avatars per workspace.
+          Profiles let you use different names, emails, and avatars per workspace.
           The default profile cannot be deleted.
         </p>
       </section>
@@ -339,13 +295,23 @@ export function AccountTab() {
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="mt-1"
+              />
+            </div>
           </div>
 
           <DialogFooter>
             <Button
               size="sm"
               onClick={handleEditSave}
-              disabled={editSaving || !editName.trim()}
+              disabled={editSaving || !editName.trim() || !editEmail.trim()}
             >
               <Save className="h-3 w-3" />
               {editSaving ? "Saving..." : "Save"}
@@ -361,23 +327,35 @@ export function AccountTab() {
             <DialogTitle>New Profile</DialogTitle>
           </DialogHeader>
 
-          <div>
-            <Label className="text-xs text-muted-foreground">Name</Label>
-            <Input
-              type="search"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Profile name"
-              className="mt-1"
-              autoFocus
-            />
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-muted-foreground">Name</Label>
+              <Input
+                type="search"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Profile name"
+                className="mt-1"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="mt-1"
+              />
+            </div>
           </div>
 
           <DialogFooter>
             <Button
               size="sm"
               onClick={handleCreate}
-              disabled={newSaving || !newName.trim()}
+              disabled={newSaving || !newName.trim() || !newEmail.trim()}
             >
               {newSaving ? "Creating..." : "Create Profile"}
             </Button>

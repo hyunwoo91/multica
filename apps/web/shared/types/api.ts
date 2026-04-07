@@ -75,11 +75,13 @@ export interface CreatePersonalAccessTokenResponse extends PersonalAccessToken {
 // Profiles
 export interface CreateProfileRequest {
   name: string;
+  email: string;
   avatar_url?: string;
 }
 
 export interface UpdateProfileRequest {
   name?: string;
+  email?: string;
   avatar_url?: string;
 }
 

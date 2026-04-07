@@ -13,6 +13,7 @@ import (
 type ProfileResponse struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
+	Email     string  `json:"email"`
 	AvatarURL *string `json:"avatar_url"`
 	IsDefault bool    `json:"is_default"`
 	CreatedAt string  `json:"created_at"`
@@ -23,6 +24,7 @@ func profileToResponse(p db.Profile) ProfileResponse {
 	return ProfileResponse{
 		ID:        uuidToString(p.ID),
 		Name:      p.Name,
+		Email:     p.Email,
 		AvatarURL: textToPtr(p.AvatarUrl),
 		IsDefault: p.IsDefault,
 		CreatedAt: timestampToString(p.CreatedAt),
@@ -52,6 +54,7 @@ func (h *Handler) ListProfiles(w http.ResponseWriter, r *http.Request) {
 
 type CreateProfileRequest struct {
 	Name      string  `json:"name"`
+	Email     string  `json:"email"`
 	AvatarURL *string `json:"avatar_url"`
 }
 
@@ -73,10 +76,16 @@ func (h *Handler) CreateProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if email == "" {
+		writeError(w, http.StatusBadRequest, "email is required")
+		return
+	}
 
 	params := db.CreateProfileParams{
 		UserID:    parseUUID(userID),
 		Name:      name,
+		Email:     email,
 		IsDefault: false,
 	}
 	if req.AvatarURL != nil {
@@ -94,6 +103,7 @@ func (h *Handler) CreateProfile(w http.ResponseWriter, r *http.Request) {
 
 type UpdateProfileRequest struct {
 	Name      *string `json:"name"`
+	Email     *string `json:"email"`
 	AvatarURL *string `json:"avatar_url"`
 }
 
@@ -130,6 +140,14 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		params.Name = pgtype.Text{String: name, Valid: true}
+	}
+	if req.Email != nil {
+		email := strings.ToLower(strings.TrimSpace(*req.Email))
+		if email == "" {
+			writeError(w, http.StatusBadRequest, "email cannot be empty")
+			return
+		}
+		params.Email = pgtype.Text{String: email, Valid: true}
 	}
 	if req.AvatarURL != nil {
 		params.AvatarUrl = pgtype.Text{String: strings.TrimSpace(*req.AvatarURL), Valid: true}

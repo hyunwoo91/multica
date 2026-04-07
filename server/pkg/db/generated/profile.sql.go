@@ -12,14 +12,15 @@ import (
 )
 
 const createProfile = `-- name: CreateProfile :one
-INSERT INTO profile (user_id, name, avatar_url, is_default)
-VALUES ($1, $2, $3, $4)
-RETURNING id, user_id, name, avatar_url, is_default, created_at, updated_at
+INSERT INTO profile (user_id, name, email, avatar_url, is_default)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, user_id, name, avatar_url, is_default, created_at, updated_at, email
 `
 
 type CreateProfileParams struct {
 	UserID    pgtype.UUID `json:"user_id"`
 	Name      string      `json:"name"`
+	Email     string      `json:"email"`
 	AvatarUrl pgtype.Text `json:"avatar_url"`
 	IsDefault bool        `json:"is_default"`
 }
@@ -28,6 +29,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 	row := q.db.QueryRow(ctx, createProfile,
 		arg.UserID,
 		arg.Name,
+		arg.Email,
 		arg.AvatarUrl,
 		arg.IsDefault,
 	)
@@ -40,6 +42,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
@@ -54,7 +57,7 @@ func (q *Queries) DeleteProfile(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getDefaultProfile = `-- name: GetDefaultProfile :one
-SELECT id, user_id, name, avatar_url, is_default, created_at, updated_at FROM profile
+SELECT id, user_id, name, avatar_url, is_default, created_at, updated_at, email FROM profile
 WHERE user_id = $1 AND is_default = true
 `
 
@@ -69,12 +72,13 @@ func (q *Queries) GetDefaultProfile(ctx context.Context, userID pgtype.UUID) (Pr
 		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
 
 const getProfile = `-- name: GetProfile :one
-SELECT id, user_id, name, avatar_url, is_default, created_at, updated_at FROM profile
+SELECT id, user_id, name, avatar_url, is_default, created_at, updated_at, email FROM profile
 WHERE id = $1
 `
 
@@ -89,12 +93,13 @@ func (q *Queries) GetProfile(ctx context.Context, id pgtype.UUID) (Profile, erro
 		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
 
 const listProfilesByUser = `-- name: ListProfilesByUser :many
-SELECT id, user_id, name, avatar_url, is_default, created_at, updated_at FROM profile
+SELECT id, user_id, name, avatar_url, is_default, created_at, updated_at, email FROM profile
 WHERE user_id = $1
 ORDER BY is_default DESC, created_at ASC
 `
@@ -116,6 +121,7 @@ func (q *Queries) ListProfilesByUser(ctx context.Context, userID pgtype.UUID) ([
 			&i.IsDefault,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Email,
 		); err != nil {
 			return nil, err
 		}
@@ -169,20 +175,27 @@ func (q *Queries) SetMemberProfile(ctx context.Context, arg SetMemberProfilePara
 const updateProfile = `-- name: UpdateProfile :one
 UPDATE profile SET
     name = COALESCE($2, name),
-    avatar_url = COALESCE($3, avatar_url),
+    email = COALESCE($3, email),
+    avatar_url = COALESCE($4, avatar_url),
     updated_at = now()
 WHERE id = $1
-RETURNING id, user_id, name, avatar_url, is_default, created_at, updated_at
+RETURNING id, user_id, name, avatar_url, is_default, created_at, updated_at, email
 `
 
 type UpdateProfileParams struct {
 	ID        pgtype.UUID `json:"id"`
 	Name      pgtype.Text `json:"name"`
+	Email     pgtype.Text `json:"email"`
 	AvatarUrl pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (Profile, error) {
-	row := q.db.QueryRow(ctx, updateProfile, arg.ID, arg.Name, arg.AvatarUrl)
+	row := q.db.QueryRow(ctx, updateProfile,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.AvatarUrl,
+	)
 	var i Profile
 	err := row.Scan(
 		&i.ID,
@@ -192,6 +205,7 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }

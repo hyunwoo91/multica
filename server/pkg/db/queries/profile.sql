@@ -12,13 +12,14 @@ WHERE user_id = $1
 ORDER BY is_default DESC, created_at ASC;
 
 -- name: CreateProfile :one
-INSERT INTO profile (user_id, name, avatar_url, is_default)
-VALUES ($1, $2, $3, $4)
+INSERT INTO profile (user_id, name, email, avatar_url, is_default)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: UpdateProfile :one
 UPDATE profile SET
     name = COALESCE(sqlc.narg('name'), name),
+    email = COALESCE(sqlc.narg('email'), email),
     avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url),
     updated_at = now()
 WHERE id = $1

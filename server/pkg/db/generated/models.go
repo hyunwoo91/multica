@@ -273,6 +273,7 @@ type Profile struct {
 	IsDefault bool               `json:"is_default"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	Email     string             `json:"email"`
 }
 
 type RuntimeUsage struct {

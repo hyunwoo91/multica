@@ -50,6 +50,7 @@ export interface MemberWithUser {
 export interface Profile {
   id: string;
   name: string;
+  email: string;
   avatar_url: string | null;
   is_default: boolean;
   created_at: string;
