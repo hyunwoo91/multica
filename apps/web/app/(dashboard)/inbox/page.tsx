@@ -414,7 +414,10 @@ export default function InboxPage() {
           layoutId="multica_inbox_issue_detail_layout"
           highlightCommentId={selected.details?.comment_id ?? undefined}
           onDelete={() => {
-            handleArchive(selected.id);
+            // Issue (and its inbox items) are already CASCADE-deleted on the server.
+            // Just clean up local state — no API call needed.
+            useInboxStore.getState().removeByIssueId(selected.issue_id!);
+            setSelectedKey("");
           }}
         />
       ) : selected ? (
