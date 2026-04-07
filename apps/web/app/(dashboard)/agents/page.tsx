@@ -31,6 +31,7 @@ import {
   Lock,
   Settings,
   Camera,
+  Square,
 } from "lucide-react";
 import type {
   Agent,
@@ -1057,6 +1058,7 @@ function TriggersTab({
 function TasksTab({ agent }: { agent: Agent }) {
   const [tasks, setTasks] = useState<AgentTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set());
   const issues = useIssueStore((s) => s.issues);
 
   useEffect(() => {
@@ -1099,6 +1101,25 @@ function TasksTab({ agent }: { agent: Agent }) {
   });
 
   const issueMap = new Map(issues.map((i) => [i.id, i]));
+
+  const cancellableStatuses = new Set(["queued", "dispatched", "running"]);
+
+  const handleCancel = async (task: AgentTask) => {
+    setCancellingIds((prev) => new Set(prev).add(task.id));
+    try {
+      const updated = await api.cancelTask(task.issue_id, task.id);
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      toast.success("Task cancelled");
+    } catch {
+      toast.error("Failed to cancel task");
+    } finally {
+      setCancellingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(task.id);
+        return next;
+      });
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -1168,6 +1189,21 @@ function TasksTab({ agent }: { agent: Agent }) {
                 <span className={`shrink-0 text-xs font-medium ${config.color}`}>
                   {config.label}
                 </span>
+                {cancellableStatuses.has(task.status) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    disabled={cancellingIds.has(task.id)}
+                    onClick={() => handleCancel(task)}
+                  >
+                    {cancellingIds.has(task.id) ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Square className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                )}
               </div>
             );
           })}
