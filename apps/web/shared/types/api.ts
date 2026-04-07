@@ -11,6 +11,7 @@ export interface CreateIssueRequest {
   assignee_id?: string;
   parent_issue_id?: string;
   due_date?: string;
+  trigger_on_reply?: boolean;
 }
 
 export interface UpdateIssueRequest {
@@ -22,6 +23,7 @@ export interface UpdateIssueRequest {
   assignee_id?: string | null;
   position?: number;
   due_date?: string | null;
+  trigger_on_reply?: boolean;
 }
 
 export interface ListIssuesParams {

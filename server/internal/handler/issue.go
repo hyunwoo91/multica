@@ -37,6 +37,7 @@ type IssueResponse struct {
 	UpdatedAt          string                  `json:"updated_at"`
 	Reactions          []IssueReactionResponse `json:"reactions,omitempty"`
 	Attachments        []AttachmentResponse    `json:"attachments,omitempty"`
+	TriggerOnReply     bool                    `json:"trigger_on_reply"`
 }
 
 type agentTriggerSnapshot struct {
@@ -73,9 +74,10 @@ func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 		CreatorID:     uuidToString(i.CreatorID),
 		ParentIssueID: uuidToPtr(i.ParentIssueID),
 		Position:      i.Position,
-		DueDate:       timestampToPtr(i.DueDate),
-		CreatedAt:     timestampToString(i.CreatedAt),
-		UpdatedAt:     timestampToString(i.UpdatedAt),
+		DueDate:        timestampToPtr(i.DueDate),
+		CreatedAt:      timestampToString(i.CreatedAt),
+		UpdatedAt:      timestampToString(i.UpdatedAt),
+		TriggerOnReply: i.TriggerOnReply,
 	}
 }
 
@@ -178,6 +180,7 @@ type CreateIssueRequest struct {
 	AssigneeID         *string `json:"assignee_id"`
 	ParentIssueID      *string `json:"parent_issue_id"`
 	DueDate            *string `json:"due_date"`
+	TriggerOnReply     *bool   `json:"trigger_on_reply"`
 }
 
 func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
@@ -261,6 +264,11 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	// Determine creator identity: agent (via X-Agent-ID header) or member.
 	creatorType, actualCreatorID := h.resolveActor(r, creatorID, workspaceID)
 
+	triggerOnReply := true
+	if req.TriggerOnReply != nil {
+		triggerOnReply = *req.TriggerOnReply
+	}
+
 	issue, err := qtx.CreateIssue(r.Context(), db.CreateIssueParams{
 		WorkspaceID:        parseUUID(workspaceID),
 		Title:              req.Title,
@@ -275,6 +283,7 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		Position:           0,
 		DueDate:            dueDate,
 		Number:             issueNumber,
+		TriggerOnReply:     triggerOnReply,
 	})
 	if err != nil {
 		slog.Warn("create issue failed", append(logger.RequestAttrs(r), "error", err, "workspace_id", workspaceID)...)
@@ -311,6 +320,7 @@ type UpdateIssueRequest struct {
 	AssigneeID         *string  `json:"assignee_id"`
 	Position           *float64 `json:"position"`
 	DueDate            *string  `json:"due_date"`
+	TriggerOnReply     *bool    `json:"trigger_on_reply"`
 }
 
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
@@ -362,6 +372,9 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Position != nil {
 		params.Position = pgtype.Float8{Float64: *req.Position, Valid: true}
+	}
+	if req.TriggerOnReply != nil {
+		params.TriggerOnReply = pgtype.Bool{Bool: *req.TriggerOnReply, Valid: true}
 	}
 	// Nullable fields — only override when explicitly present in JSON
 	if _, ok := rawFields["assignee_type"]; ok {
@@ -498,6 +511,10 @@ func (h *Handler) shouldEnqueueAgentTask(ctx context.Context, issue db.Issue) bo
 // trigger the assigned agent. Fires for any non-terminal status — comments are
 // conversational and can happen at any stage of active work.
 func (h *Handler) shouldEnqueueOnComment(ctx context.Context, issue db.Issue) bool {
+	// Check per-issue trigger_on_reply setting.
+	if !issue.TriggerOnReply {
+		return false
+	}
 	// Don't trigger on terminal statuses (done, cancelled).
 	if issue.Status == "done" || issue.Status == "cancelled" {
 		return false

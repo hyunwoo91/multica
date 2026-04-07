@@ -221,6 +221,7 @@ vi.mock("@dnd-kit/utilities", () => ({
 const issueDefaults = {
   parent_issue_id: null,
   position: 0,
+  trigger_on_reply: true,
 };
 
 const mockIssues: Issue[] = [

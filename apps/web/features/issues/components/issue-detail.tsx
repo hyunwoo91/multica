@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ContentEditor, type ContentEditorRef } from "@/features/editor";
 import { FileUploadButton } from "@/components/common/file-upload-button";
@@ -454,6 +455,17 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
             <PropRow label="Channels">
               <ChannelPicker issueId={issue.id} />
             </PropRow>
+
+            {/* Trigger on reply — shown when assigned to agent */}
+            {issue.assignee_type === "agent" && (
+              <PropRow label="Trigger on reply">
+                <Switch
+                  size="sm"
+                  checked={issue.trigger_on_reply}
+                  onCheckedChange={(checked: boolean) => handleUpdateField({ trigger_on_reply: checked })}
+                />
+              </PropRow>
+            )}
           </div>}
         </div>
 
