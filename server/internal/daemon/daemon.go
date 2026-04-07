@@ -924,13 +924,18 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	}
 	// Set git author/committer to the issue creator so commits are attributed
 	// to the person who filed the issue, not the daemon's local git config.
-	if task.CreatorName != "" {
-		agentEnv["GIT_AUTHOR_NAME"] = task.CreatorName
-		agentEnv["GIT_COMMITTER_NAME"] = task.CreatorName
-	}
-	if task.CreatorEmail != "" {
-		agentEnv["GIT_AUTHOR_EMAIL"] = task.CreatorEmail
-		agentEnv["GIT_COMMITTER_EMAIL"] = task.CreatorEmail
+	if task.CreatorName != "" || task.CreatorEmail != "" {
+		d.logger.Info("setting git author from issue creator", "name", task.CreatorName, "email", task.CreatorEmail, "task_id", task.ID)
+		if task.CreatorName != "" {
+			agentEnv["GIT_AUTHOR_NAME"] = task.CreatorName
+			agentEnv["GIT_COMMITTER_NAME"] = task.CreatorName
+		}
+		if task.CreatorEmail != "" {
+			agentEnv["GIT_AUTHOR_EMAIL"] = task.CreatorEmail
+			agentEnv["GIT_COMMITTER_EMAIL"] = task.CreatorEmail
+		}
+	} else {
+		d.logger.Warn("no creator info for git author", "task_id", task.ID, "issue_id", task.IssueID)
 	}
 	// Point Codex to the per-task CODEX_HOME so it discovers skills natively
 	// without polluting the system ~/.codex/skills/.

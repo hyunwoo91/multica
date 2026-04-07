@@ -319,7 +319,16 @@ func trySend(ch chan<- Message, msg Message) {
 }
 
 func buildEnv(extra map[string]string) []string {
-	env := os.Environ()
+	base := os.Environ()
+	env := make([]string, 0, len(base)+len(extra))
+	for _, entry := range base {
+		if k, _, ok := strings.Cut(entry, "="); ok {
+			if _, override := extra[k]; override {
+				continue // skip — will be replaced by extra
+			}
+		}
+		env = append(env, entry)
+	}
 	for k, v := range extra {
 		env = append(env, k+"="+v)
 	}
