@@ -264,13 +264,18 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 				resp.CreatorName = user.Name
 				resp.CreatorEmail = user.Email
 			}
-			// Override name with profile name if the member has one assigned.
+			// Override name/email with profile if the member has one assigned.
 			if member, err := h.Queries.GetMemberByUserAndWorkspace(r.Context(), db.GetMemberByUserAndWorkspaceParams{
 				UserID:      issue.CreatorID,
 				WorkspaceID: issue.WorkspaceID,
 			}); err == nil && member.ProfileID.Valid {
-				if profile, err := h.Queries.GetProfile(r.Context(), member.ProfileID); err == nil && profile.Name != "" {
-					resp.CreatorName = profile.Name
+				if profile, err := h.Queries.GetProfile(r.Context(), member.ProfileID); err == nil {
+					if profile.Name != "" {
+						resp.CreatorName = profile.Name
+					}
+					if profile.Email != "" {
+						resp.CreatorEmail = profile.Email
+					}
 				}
 			}
 		}
