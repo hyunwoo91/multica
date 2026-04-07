@@ -246,13 +246,23 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Include workspace ID and repos so the daemon can set up worktrees.
+	// Include workspace ID, repos, and issue creator info so the daemon can
+	// set up worktrees and configure git author per task.
 	if issue, err := h.Queries.GetIssue(r.Context(), task.IssueID); err == nil {
 		resp.WorkspaceID = uuidToString(issue.WorkspaceID)
 		if ws, err := h.Queries.GetWorkspace(r.Context(), issue.WorkspaceID); err == nil && ws.Repos != nil {
 			var repos []RepoData
 			if json.Unmarshal(ws.Repos, &repos) == nil && len(repos) > 0 {
 				resp.Repos = repos
+			}
+		}
+		// Resolve the issue creator's name and email for git authorship.
+		if issue.CreatorType == "member" && issue.CreatorID.Valid {
+			if member, err := h.Queries.GetMember(r.Context(), issue.CreatorID); err == nil {
+				if user, err := h.Queries.GetUser(r.Context(), member.UserID); err == nil {
+					resp.CreatorName = user.Name
+					resp.CreatorEmail = user.Email
+				}
 			}
 		}
 	}

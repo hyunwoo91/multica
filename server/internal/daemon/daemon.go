@@ -922,6 +922,16 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		"MULTICA_TASK_ID":      task.ID,
 		"MULTICA_ISSUE_ID":    task.IssueID,
 	}
+	// Set git author/committer to the issue creator so commits are attributed
+	// to the person who filed the issue, not the daemon's local git config.
+	if task.CreatorName != "" {
+		agentEnv["GIT_AUTHOR_NAME"] = task.CreatorName
+		agentEnv["GIT_COMMITTER_NAME"] = task.CreatorName
+	}
+	if task.CreatorEmail != "" {
+		agentEnv["GIT_AUTHOR_EMAIL"] = task.CreatorEmail
+		agentEnv["GIT_COMMITTER_EMAIL"] = task.CreatorEmail
+	}
 	// Point Codex to the per-task CODEX_HOME so it discovers skills natively
 	// without polluting the system ~/.codex/skills/.
 	if env.CodexHome != "" {

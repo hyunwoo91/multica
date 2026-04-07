@@ -30,6 +30,8 @@ type Task struct {
 	WorkspaceID    string     `json:"workspace_id"`
 	Agent          *AgentData `json:"agent,omitempty"`
 	Repos          []RepoData `json:"repos,omitempty"`
+	CreatorName      string     `json:"creator_name,omitempty"`        // issue creator's display name (for git author)
+	CreatorEmail     string     `json:"creator_email,omitempty"`       // issue creator's email (for git author)
 	PriorSessionID   string     `json:"prior_session_id,omitempty"`    // Claude session ID from a previous task on this issue
 	PriorWorkDir     string     `json:"prior_work_dir,omitempty"`     // work_dir from a previous task on this issue
 	TriggerCommentID string     `json:"trigger_comment_id,omitempty"` // comment that triggered this task

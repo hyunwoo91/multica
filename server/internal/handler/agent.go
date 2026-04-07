@@ -107,6 +107,8 @@ type AgentTaskResponse struct {
 	Error          *string        `json:"error"`
 	Agent          *TaskAgentData `json:"agent,omitempty"`
 	Repos          []RepoData     `json:"repos,omitempty"`
+	CreatorName    string         `json:"creator_name,omitempty"`
+	CreatorEmail   string         `json:"creator_email,omitempty"`
 	CreatedAt      string         `json:"created_at"`
 	PriorSessionID   string         `json:"prior_session_id,omitempty"`    // session ID from a previous task on same issue
 	PriorWorkDir     string         `json:"prior_work_dir,omitempty"`     // work_dir from a previous task on same issue
