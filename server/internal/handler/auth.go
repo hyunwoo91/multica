@@ -206,6 +206,7 @@ func (h *Handler) findOrCreateUser(ctx context.Context, email string) (db.User, 
 		_, _ = h.Queries.CreateProfile(ctx, db.CreateProfileParams{
 			UserID:    user.ID,
 			Name:      user.Name,
+			Email:     user.Email,
 			IsDefault: true,
 		})
 	} else {
@@ -214,6 +215,7 @@ func (h *Handler) findOrCreateUser(ctx context.Context, email string) (db.User, 
 			_, _ = h.Queries.CreateProfile(ctx, db.CreateProfileParams{
 				UserID:    user.ID,
 				Name:      user.Name,
+				Email:     user.Email,
 				AvatarUrl: user.AvatarUrl,
 				IsDefault: true,
 			})

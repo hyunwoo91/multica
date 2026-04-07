@@ -131,7 +131,7 @@ func (q *Queries) ListMembers(ctx context.Context, workspaceID pgtype.UUID) ([]M
 const listMembersWithUser = `-- name: ListMembersWithUser :many
 SELECT m.id, m.workspace_id, m.user_id, m.role, m.created_at,
        COALESCE(p.name, u.name) as user_name,
-       u.email as user_email,
+       COALESCE(NULLIF(p.email, ''), u.email) as user_email,
        COALESCE(p.avatar_url, u.avatar_url) as user_avatar_url,
        m.profile_id as profile_id
 FROM member m
