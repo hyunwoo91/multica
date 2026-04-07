@@ -1,0 +1,1 @@
+ALTER TABLE issue ADD COLUMN trigger_on_reply BOOLEAN NOT NULL DEFAULT true;

@@ -197,6 +197,7 @@ type Issue struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	Number             int32              `json:"number"`
+	TriggerOnReply     bool               `json:"trigger_on_reply"`
 }
 
 type IssueChannel struct {
