@@ -54,6 +54,7 @@ interface InboxState {
   markAllRead: () => void;
   archiveAll: () => void;
   archiveAllRead: () => void;
+  removeByIssueId: (issueId: string) => void;
   updateIssueStatus: (issueId: string, status: IssueStatus) => void;
   dedupedItems: () => InboxItem[];
   unreadCount: () => number;
@@ -106,6 +107,10 @@ export const useInboxStore = create<InboxState>((set, get) => ({
       items: s.items.map((i) =>
         i.read && !i.archived ? { ...i, archived: true } : i
       ),
+    })),
+  removeByIssueId: (issueId) =>
+    set((s) => ({
+      items: s.items.filter((i) => i.issue_id !== issueId),
     })),
   updateIssueStatus: (issueId, status) =>
     set((s) => ({

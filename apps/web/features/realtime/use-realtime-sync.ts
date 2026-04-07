@@ -105,7 +105,10 @@ export function useRealtimeSync(ws: WSClient | null) {
 
     const unsubIssueDeleted = ws.on("issue:deleted", (p) => {
       const { issue_id } = p as IssueDeletedPayload;
-      if (issue_id) useIssueStore.getState().removeIssue(issue_id);
+      if (issue_id) {
+        useIssueStore.getState().removeIssue(issue_id);
+        useInboxStore.getState().removeByIssueId(issue_id);
+      }
     });
 
     const unsubInboxNew = ws.on("inbox:new", (p) => {
