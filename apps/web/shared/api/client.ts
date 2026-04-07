@@ -28,6 +28,10 @@ import type {
   PersonalAccessToken,
   CreatePersonalAccessTokenRequest,
   CreatePersonalAccessTokenResponse,
+  Profile,
+  CreateProfileRequest,
+  UpdateProfileRequest,
+  SetWorkspaceProfileRequest,
   RuntimeUsage,
   RuntimeHourlyActivity,
   RuntimePing,
@@ -150,6 +154,36 @@ export class ApiClient {
   async updateMe(data: UpdateMeRequest): Promise<User> {
     return this.fetch("/api/me", {
       method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Profiles
+  async listProfiles(): Promise<Profile[]> {
+    return this.fetch("/api/profiles");
+  }
+
+  async createProfile(data: CreateProfileRequest): Promise<Profile> {
+    return this.fetch("/api/profiles", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProfile(id: string, data: UpdateProfileRequest): Promise<Profile> {
+    return this.fetch(`/api/profiles/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProfile(id: string): Promise<void> {
+    await this.fetch(`/api/profiles/${id}`, { method: "DELETE" });
+  }
+
+  async setWorkspaceProfile(workspaceId: string, data: SetWorkspaceProfileRequest): Promise<Profile> {
+    return this.fetch(`/api/workspaces/${workspaceId}/profile`, {
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }

@@ -119,6 +119,16 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 		r.Patch("/api/me", h.UpdateMe)
 		r.Post("/api/upload-file", h.UploadFile)
 
+		// Profiles
+		r.Route("/api/profiles", func(r chi.Router) {
+			r.Get("/", h.ListProfiles)
+			r.Post("/", h.CreateProfile)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Patch("/", h.UpdateProfile)
+				r.Delete("/", h.DeleteProfile)
+			})
+		})
+
 		r.Route("/api/workspaces", func(r chi.Router) {
 			r.Get("/", h.ListWorkspaces)
 			r.Post("/", h.CreateWorkspace)
@@ -129,6 +139,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 					r.Get("/", h.GetWorkspace)
 					r.Get("/members", h.ListMembersWithUser)
 					r.Post("/leave", h.LeaveWorkspace)
+					r.Put("/profile", h.SetWorkspaceProfile)
 				})
 				// Admin-level access
 				r.Group(func(r chi.Router) {

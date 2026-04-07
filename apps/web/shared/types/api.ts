@@ -71,6 +71,21 @@ export interface CreatePersonalAccessTokenResponse extends PersonalAccessToken {
   token: string;
 }
 
+// Profiles
+export interface CreateProfileRequest {
+  name: string;
+  avatar_url?: string;
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  avatar_url?: string;
+}
+
+export interface SetWorkspaceProfileRequest {
+  profile_id: string;
+}
+
 // Pagination
 export interface PaginationParams {
   limit?: number;
