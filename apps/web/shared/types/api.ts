@@ -40,6 +40,7 @@ export interface ListIssuesResponse {
 
 export interface UpdateMeRequest {
   name?: string;
+  email?: string;
   avatar_url?: string;
 }
 

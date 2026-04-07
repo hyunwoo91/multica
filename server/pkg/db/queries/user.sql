@@ -14,7 +14,8 @@ RETURNING *;
 -- name: UpdateUser :one
 UPDATE "user" SET
     name = COALESCE($2, name),
-    avatar_url = COALESCE($3, avatar_url),
+    email = COALESCE($3, email),
+    avatar_url = COALESCE($4, avatar_url),
     updated_at = now()
 WHERE id = $1
 RETURNING *;
