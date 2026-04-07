@@ -12,19 +12,25 @@ import (
 )
 
 const createMember = `-- name: CreateMember :one
-INSERT INTO member (workspace_id, user_id, role)
-VALUES ($1, $2, $3)
-RETURNING id, workspace_id, user_id, role, created_at
+INSERT INTO member (workspace_id, user_id, role, profile_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, workspace_id, user_id, role, created_at, profile_id
 `
 
 type CreateMemberParams struct {
 	WorkspaceID pgtype.UUID `json:"workspace_id"`
 	UserID      pgtype.UUID `json:"user_id"`
 	Role        string      `json:"role"`
+	ProfileID   pgtype.UUID `json:"profile_id"`
 }
 
 func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (Member, error) {
-	row := q.db.QueryRow(ctx, createMember, arg.WorkspaceID, arg.UserID, arg.Role)
+	row := q.db.QueryRow(ctx, createMember,
+		arg.WorkspaceID,
+		arg.UserID,
+		arg.Role,
+		arg.ProfileID,
+	)
 	var i Member
 	err := row.Scan(
 		&i.ID,
@@ -32,6 +38,7 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (Mem
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
+		&i.ProfileID,
 	)
 	return i, err
 }
@@ -46,7 +53,7 @@ func (q *Queries) DeleteMember(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getMember = `-- name: GetMember :one
-SELECT id, workspace_id, user_id, role, created_at FROM member
+SELECT id, workspace_id, user_id, role, created_at, profile_id FROM member
 WHERE id = $1
 `
 
@@ -59,12 +66,13 @@ func (q *Queries) GetMember(ctx context.Context, id pgtype.UUID) (Member, error)
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
+		&i.ProfileID,
 	)
 	return i, err
 }
 
 const getMemberByUserAndWorkspace = `-- name: GetMemberByUserAndWorkspace :one
-SELECT id, workspace_id, user_id, role, created_at FROM member
+SELECT id, workspace_id, user_id, role, created_at, profile_id FROM member
 WHERE user_id = $1 AND workspace_id = $2
 `
 
@@ -82,12 +90,13 @@ func (q *Queries) GetMemberByUserAndWorkspace(ctx context.Context, arg GetMember
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
+		&i.ProfileID,
 	)
 	return i, err
 }
 
 const listMembers = `-- name: ListMembers :many
-SELECT id, workspace_id, user_id, role, created_at FROM member
+SELECT id, workspace_id, user_id, role, created_at, profile_id FROM member
 WHERE workspace_id = $1
 ORDER BY created_at ASC
 `
@@ -107,6 +116,7 @@ func (q *Queries) ListMembers(ctx context.Context, workspaceID pgtype.UUID) ([]M
 			&i.UserID,
 			&i.Role,
 			&i.CreatedAt,
+			&i.ProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -120,9 +130,13 @@ func (q *Queries) ListMembers(ctx context.Context, workspaceID pgtype.UUID) ([]M
 
 const listMembersWithUser = `-- name: ListMembersWithUser :many
 SELECT m.id, m.workspace_id, m.user_id, m.role, m.created_at,
-       u.name as user_name, u.email as user_email, u.avatar_url as user_avatar_url
+       COALESCE(p.name, u.name) as user_name,
+       u.email as user_email,
+       COALESCE(p.avatar_url, u.avatar_url) as user_avatar_url,
+       m.profile_id as profile_id
 FROM member m
 JOIN "user" u ON u.id = m.user_id
+LEFT JOIN profile p ON p.id = m.profile_id
 WHERE m.workspace_id = $1
 ORDER BY m.created_at ASC
 `
@@ -136,6 +150,7 @@ type ListMembersWithUserRow struct {
 	UserName      string             `json:"user_name"`
 	UserEmail     string             `json:"user_email"`
 	UserAvatarUrl pgtype.Text        `json:"user_avatar_url"`
+	ProfileID     pgtype.UUID        `json:"profile_id"`
 }
 
 func (q *Queries) ListMembersWithUser(ctx context.Context, workspaceID pgtype.UUID) ([]ListMembersWithUserRow, error) {
@@ -156,6 +171,7 @@ func (q *Queries) ListMembersWithUser(ctx context.Context, workspaceID pgtype.UU
 			&i.UserName,
 			&i.UserEmail,
 			&i.UserAvatarUrl,
+			&i.ProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -170,7 +186,7 @@ func (q *Queries) ListMembersWithUser(ctx context.Context, workspaceID pgtype.UU
 const updateMemberRole = `-- name: UpdateMemberRole :one
 UPDATE member SET role = $2
 WHERE id = $1
-RETURNING id, workspace_id, user_id, role, created_at
+RETURNING id, workspace_id, user_id, role, created_at, profile_id
 `
 
 type UpdateMemberRoleParams struct {
@@ -187,6 +203,7 @@ func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRolePara
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
+		&i.ProfileID,
 	)
 	return i, err
 }

@@ -177,10 +177,12 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defaultProfile, _ := h.Queries.GetDefaultProfile(r.Context(), parseUUID(userID))
 	_, err = qtx.CreateMember(r.Context(), db.CreateMemberParams{
 		WorkspaceID: ws.ID,
 		UserID:      parseUUID(userID),
 		Role:        "owner",
+		ProfileID:   defaultProfile.ID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to add owner: "+err.Error())
@@ -289,6 +291,7 @@ type MemberWithUserResponse struct {
 	Name        string  `json:"name"`
 	Email       string  `json:"email"`
 	AvatarURL   *string `json:"avatar_url"`
+	ProfileID   *string `json:"profile_id"`
 }
 
 func (h *Handler) ListMembersWithUser(w http.ResponseWriter, r *http.Request) {
@@ -311,6 +314,7 @@ func (h *Handler) ListMembersWithUser(w http.ResponseWriter, r *http.Request) {
 			Name:        m.UserName,
 			Email:       m.UserEmail,
 			AvatarURL:   textToPtr(m.UserAvatarUrl),
+			ProfileID:   uuidToPtr(m.ProfileID),
 		}
 	}
 
@@ -332,6 +336,7 @@ func memberWithUserResponse(member db.Member, user db.User) MemberWithUserRespon
 		Name:        user.Name,
 		Email:       user.Email,
 		AvatarURL:   textToPtr(user.AvatarUrl),
+		ProfileID:   uuidToPtr(member.ProfileID),
 	}
 }
 
@@ -396,10 +401,12 @@ func (h *Handler) CreateMember(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	inviteeProfile, _ := h.Queries.GetDefaultProfile(r.Context(), user.ID)
 	member, err := h.Queries.CreateMember(r.Context(), db.CreateMemberParams{
 		WorkspaceID: parseUUID(workspaceID),
 		UserID:      user.ID,
 		Role:        role,
+		ProfileID:   inviteeProfile.ID,
 	})
 	if err != nil {
 		if isUniqueViolation(err) {

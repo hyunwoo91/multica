@@ -1,0 +1,2 @@
+ALTER TABLE member DROP COLUMN IF EXISTS profile_id;
+DROP TABLE IF EXISTS profile;
