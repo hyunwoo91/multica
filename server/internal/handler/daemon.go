@@ -257,11 +257,18 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// Resolve the issue creator's name and email for git authorship.
+		// Prefer the member's profile name (per-workspace identity) over the user name.
 		if issue.CreatorType == "member" && issue.CreatorID.Valid {
 			if member, err := h.Queries.GetMember(r.Context(), issue.CreatorID); err == nil {
 				if user, err := h.Queries.GetUser(r.Context(), member.UserID); err == nil {
 					resp.CreatorName = user.Name
 					resp.CreatorEmail = user.Email
+				}
+				// Override name with profile name if the member has one assigned.
+				if member.ProfileID.Valid {
+					if profile, err := h.Queries.GetProfile(r.Context(), member.ProfileID); err == nil && profile.Name != "" {
+						resp.CreatorName = profile.Name
+					}
 				}
 			}
 		}
