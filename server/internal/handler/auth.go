@@ -150,10 +150,14 @@ func (h *Handler) ensureUserWorkspace(ctx context.Context, user db.User) error {
 		return err
 	}
 
+	// Look up user's default profile to link to the member.
+	defaultProfile, _ := qtx.GetDefaultProfile(ctx, user.ID)
+
 	if _, err := qtx.CreateMember(ctx, db.CreateMemberParams{
 		WorkspaceID: workspace.ID,
 		UserID:      user.ID,
 		Role:        "owner",
+		ProfileID:   defaultProfile.ID,
 	}); err != nil {
 		return err
 	}
@@ -197,6 +201,22 @@ func (h *Handler) findOrCreateUser(ctx context.Context, email string) (db.User, 
 		})
 		if err != nil {
 			return db.User{}, err
+		}
+		// Create the default profile for the new user.
+		_, _ = h.Queries.CreateProfile(ctx, db.CreateProfileParams{
+			UserID:    user.ID,
+			Name:      user.Name,
+			IsDefault: true,
+		})
+	} else {
+		// Ensure existing users have a default profile (backfill safety).
+		if _, pErr := h.Queries.GetDefaultProfile(ctx, user.ID); isNotFound(pErr) {
+			_, _ = h.Queries.CreateProfile(ctx, db.CreateProfileParams{
+				UserID:    user.ID,
+				Name:      user.Name,
+				AvatarUrl: user.AvatarUrl,
+				IsDefault: true,
+			})
 		}
 	}
 	return user, nil
