@@ -110,7 +110,19 @@ export function useRealtimeSync(ws: WSClient | null) {
 
     const unsubInboxNew = ws.on("inbox:new", (p) => {
       const { item } = p as InboxNewPayload;
-      if (item) useInboxStore.getState().addItem(item);
+      if (!item) return;
+      // Reconcile issue_status with the issue store's current status.
+      // The WS event carries the status captured at notification creation time,
+      // which may be stale if the issue status changed since then.
+      if (item.issue_id) {
+        const current = useIssueStore.getState().issues.find(
+          (i) => i.id === item.issue_id,
+        );
+        if (current) {
+          item.issue_status = current.status;
+        }
+      }
+      useInboxStore.getState().addItem(item);
     });
 
     // --- Side-effect handlers (toast, navigation) ---

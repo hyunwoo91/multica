@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useDefaultLayout } from "react-resizable-panels";
 import { useInboxStore } from "@/features/inbox";
+import { useIssueStore } from "@/features/issues";
 import { IssueDetail, StatusIcon, PriorityIcon } from "@/features/issues/components";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/features/issues/config";
 import { useActorName } from "@/features/workspace";
@@ -155,6 +156,13 @@ function InboxListItem({
   onClick: () => void;
   onArchive: () => void;
 }) {
+  // Prefer current issue status from the issue store over the inbox item's
+  // snapshot, which may be stale if the status changed after notification creation.
+  const liveStatus = useIssueStore(
+    (s) => s.issues.find((i) => i.id === item.issue_id)?.status,
+  );
+  const issueStatus = liveStatus ?? item.issue_status;
+
   return (
     <button
       onClick={onClick}
@@ -198,8 +206,8 @@ function InboxListItem({
             >
               <Archive className="h-3.5 w-3.5" />
             </span>
-            {item.issue_status && (
-              <StatusIcon status={item.issue_status} className="h-3.5 w-3.5 shrink-0" />
+            {issueStatus && (
+              <StatusIcon status={issueStatus} className="h-3.5 w-3.5 shrink-0" />
             )}
           </div>
         </div>
