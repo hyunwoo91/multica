@@ -20,21 +20,28 @@ POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-multica}"
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
 
-echo "==> Ensuring shared PostgreSQL container is running on localhost:5432..."
-docker compose up -d postgres
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 
-echo "==> Waiting for PostgreSQL to be ready..."
-until docker compose exec -T postgres pg_isready -U "$POSTGRES_USER" -d postgres > /dev/null 2>&1; do
-  sleep 1
-done
+# If PostgreSQL is already reachable, skip docker compose entirely.
+# This prevents recreating the shared container from worktrees or agent environments.
+if pg_isready -h localhost -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -q 2>/dev/null; then
+  echo "==> PostgreSQL already reachable on localhost:$POSTGRES_PORT"
+else
+  echo "==> Starting PostgreSQL container on localhost:$POSTGRES_PORT..."
+  docker compose up -d postgres
+
+  echo "==> Waiting for PostgreSQL to be ready..."
+  until pg_isready -h localhost -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -q 2>/dev/null; do
+    sleep 1
+  done
+fi
 
 echo "==> Ensuring database '$POSTGRES_DB' exists..."
-db_exists="$(docker compose exec -T postgres \
-  psql -U "$POSTGRES_USER" -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DB'")"
+db_exists="$(psql -h localhost -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres -Atqc \
+  "SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DB'" 2>/dev/null)"
 
 if [ "$db_exists" != "1" ]; then
-  docker compose exec -T postgres \
-    psql -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 \
+  psql -h localhost -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 \
     -c "CREATE DATABASE \"$POSTGRES_DB\"" \
     > /dev/null
 fi
