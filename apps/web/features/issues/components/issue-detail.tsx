@@ -456,16 +456,6 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
               <ChannelPicker issueId={issue.id} />
             </PropRow>
 
-            {/* Trigger on reply — shown when assigned to agent */}
-            {issue.assignee_type === "agent" && (
-              <PropRow label="Trigger on reply">
-                <Switch
-                  size="sm"
-                  checked={issue.trigger_on_reply}
-                  onCheckedChange={(checked: boolean) => handleUpdateField({ trigger_on_reply: checked })}
-                />
-              </PropRow>
-            )}
           </div>}
         </div>
 

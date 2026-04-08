@@ -512,10 +512,6 @@ func (h *Handler) shouldEnqueueAgentTask(ctx context.Context, issue db.Issue) bo
 // trigger the assigned agent. Fires for any non-terminal status — comments are
 // conversational and can happen at any stage of active work.
 func (h *Handler) shouldEnqueueOnComment(ctx context.Context, issue db.Issue) bool {
-	// Check per-issue trigger_on_reply setting.
-	if !issue.TriggerOnReply {
-		return false
-	}
 	// Don't trigger on terminal statuses (done, cancelled).
 	if issue.Status == "done" || issue.Status == "cancelled" {
 		return false
