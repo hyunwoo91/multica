@@ -172,7 +172,10 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	// the user is talking to someone else, not requesting work from the assignee.
 	// Also skip when replying in a member-started thread without mentioning the
 	// assignee — the user is continuing a member-to-member conversation.
+	// For replies (comments with a parent), also check the on_reply trigger.
+	isReply := parentComment != nil
 	if authorType == "member" && h.shouldEnqueueOnComment(r.Context(), issue) &&
+		(!isReply || h.isAgentTriggerEnabled(r.Context(), issue, "on_reply")) &&
 		!h.commentMentionsOthersButNotAssignee(comment.Content, issue) &&
 		!h.isReplyToMemberThread(parentComment, comment.Content, issue) {
 		// Resolve thread root: if the comment is a reply, agent should reply

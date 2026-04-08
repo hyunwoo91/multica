@@ -276,6 +276,24 @@ func TestAgentHasTriggerEnabled(t *testing.T) {
 			want:        true,
 		},
 		{
+			name:        "on_reply explicitly enabled",
+			raw:         mustJSON([]agentTriggerSnapshot{{Type: "on_comment", Enabled: true}, {Type: "on_reply", Enabled: true}}),
+			triggerType: "on_reply",
+			want:        true,
+		},
+		{
+			name:        "on_reply explicitly disabled",
+			raw:         mustJSON([]agentTriggerSnapshot{{Type: "on_comment", Enabled: true}, {Type: "on_reply", Enabled: false}}),
+			triggerType: "on_reply",
+			want:        false,
+		},
+		{
+			name:        "on_reply not configured → enabled by default",
+			raw:         mustJSON([]agentTriggerSnapshot{{Type: "on_comment", Enabled: true}}),
+			triggerType: "on_reply",
+			want:        true,
+		},
+		{
 			name:        "invalid JSON → disabled (fail safe)",
 			raw:         []byte("{bad json"),
 			triggerType: "on_comment",
@@ -305,13 +323,14 @@ func TestDefaultAgentTriggers(t *testing.T) {
 		t.Fatalf("failed to unmarshal default triggers: %v", err)
 	}
 
-	if len(triggers) != 3 {
-		t.Fatalf("expected 3 default triggers, got %d", len(triggers))
+	if len(triggers) != 4 {
+		t.Fatalf("expected 4 default triggers, got %d", len(triggers))
 	}
 
 	expected := map[string]bool{
 		"on_assign":  true,
 		"on_comment": true,
+		"on_reply":   true,
 		"on_mention": true,
 	}
 	for _, tr := range triggers {
@@ -330,7 +349,7 @@ func TestDefaultAgentTriggers(t *testing.T) {
 	}
 
 	// Verify all triggers are enabled via agentHasTriggerEnabled
-	for _, typ := range []string{"on_assign", "on_comment", "on_mention"} {
+	for _, typ := range []string{"on_assign", "on_comment", "on_reply", "on_mention"} {
 		if !agentHasTriggerEnabled(raw, typ) {
 			t.Errorf("agentHasTriggerEnabled(default, %q) = false, want true", typ)
 		}

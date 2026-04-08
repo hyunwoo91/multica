@@ -52,6 +52,7 @@ func defaultAgentTriggers() []byte {
 	b, _ := json.Marshal([]agentTriggerSnapshot{
 		{Type: "on_assign", Enabled: true},
 		{Type: "on_comment", Enabled: true},
+		{Type: "on_reply", Enabled: true},
 		{Type: "on_mention", Enabled: true},
 	})
 	return b
